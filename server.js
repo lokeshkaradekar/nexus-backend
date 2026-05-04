@@ -4,10 +4,12 @@
 // ═══════════════════════════════════════════════════════════
 
 import express from "express";
+import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import path from "path";
+
 import { fileURLToPath } from "url";
 
 dotenv.config();
@@ -30,7 +32,7 @@ app.use(cors({
     // Allow: no origin (mobile WebView / Postman), localhost, or listed origins
     if (
       !origin ||
-      origin.startsWith("http://localst") ||
+      origin.startsWith("http://localhost") ||
       origin.startsWith("http://127.0.0.1") ||
       origin.startsWith("file://") ||
       ALLOWED_ORIGINS.includes(origin)
@@ -233,8 +235,9 @@ app.use((err, req, res, next) => {
 
 // ── Start ───────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0"; // 0.0.0.0 = accessible on LAN
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`
 ╔══════════════════════════════════════════╗
 ║       NEXUS AI STUDIO — Backend          ║
@@ -253,15 +256,4 @@ app.listen(PORT, () => {
   Open on Android: http://YOUR_LAN_IP:${PORT}
   Find your IP with: ipconfig / ifconfig
   `);
-});
-: ipconfig / ifconfig
-  `);
-});
-our IP with: ipconfig / ifconfig
-  `);
-});
-: ipconfig / ifconfig
-  `);
-});
-`);
 });
