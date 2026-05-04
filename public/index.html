@@ -621,7 +621,9 @@ let isTyping = false;
 let deviceTimer = null;
 
 // ── Config (loaded from settings) ──────────
-function getBackendURL(){ return localStorage.getItem('nexus_backend') || 'http://localhost:3000'; }
+function getBackendURL(){ 
+  return localStorage.getItem('nexus_backend') || 'nexus-backend-production-ee01.up.railway.app'; 
+}
 function getClientKey(){ return localStorage.getItem('nexus_key') || 'nexus-client-key'; }
 function getModel(){ return document.getElementById('model-pill').value; }
 
