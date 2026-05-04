@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#070B14"/>
+<title>Nexus AI Studio</title>
+<style>
+/* ═══════════════════════════════════════════
+   NEXUS AI STUDIO — WebView Edition
+   Optimised for Android WebView / Sketchware
+═══════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+:root{
+  --bg:#070B14;
+  --s1:#0D1424;
+  --s2:#111C30;
+  --bd:#1A2D4A;
+  --acc:#FF6B1A;
+  --acc2:#FF9F45;
+  --acc3:#FFD166;
+  --cyan:#00D4FF;
+  --green:#00FF9C;
+  --red:#FF5F57;
+  --purple:#9D4EDD;
+  --txt:#E8EDF5;
+  --txt2:#8899BB;
+  --glow:rgba(255,107,26,.4);
+  --glowc:rgba(0,212,255,.3);
+  --r:14px;
+  --rb:10px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;overflow:hidden}
+body{
+  height:100%;background:var(--bg);color:var(--txt);
+  font-family:'Rajdhani',sans-serif;font-size:15px;
+  overflow:hidden;overscroll-behavior:none;
+}
+
+/* ── Atmosphere ── */
+#grid-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
+  background-size:48px 48px;animation:gridScroll 25s linear infinite;
+}
+@keyframes gridScroll{to{background-position:48px 48px}}
+
+.orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0}
+.orb1{width:360px;height:360px;background:radial-gradient(circle,rgba(255,107,26,.14) 0%,transparent 70%);top:-120px;right:-80px;animation:orb1 9s ease-in-out infinite}
+.orb2{width:300px;height:300px;background:radial-gradient(circle,rgba(0,212,255,.1) 0%,transparent 70%);bottom:-100px;left:-80px;animation:orb2 11s ease-in-out infinite}
+.orb3{width:200px;height:200px;background:radial-gradient(circle,rgba(157,78,221,.09) 0%,transparent 70%);top:45%;left:45%;animation:orb3 7s ease-in-out infinite}
+@keyframes orb1{0%,100%{transform:translate(0,0)}50%{transform:translate(-20px,20px)}}
+@keyframes orb2{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-20px)}}
+@keyframes orb3{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* ── Shell ── */
+#shell{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;width:100vw}
+
+/* ── Top bar ── */
+#topbar{
+  height:52px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:rgba(13,20,36,.9);border-bottom:1px solid var(--bd);
+  backdrop-filter:blur(16px);flex-shrink:0;
+}
+#logo-text{font-family:'Orbitron',monospace;font-size:16px;font-weight:900;
+  background:linear-gradient(135deg,var(--acc),var(--acc2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:2px;
+}
+#live-badge{
+  padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;
+  background:rgba(0,255,156,.1);color:var(--green);border:1px solid rgba(0,255,156,.3);
+  font-family:'Share Tech Mono',monospace;
+}
+#model-pill{
+  margin-left:auto;background:var(--s2);border:1px solid var(--bd);color:var(--txt);
+  padding:5px 10px;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:12px;
+  font-weight:600;cursor:pointer;outline:none;max-width:140px;
+}
+
+/* ── Nav tabs ── */
+#navtabs{
+  display:flex;background:rgba(13,20,36,.8);border-bottom:1px solid var(--bd);
+  flex-shrink:0;overflow-x:auto;scrollbar-width:none;
+}
+#navtabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:1;min-width:70px;padding:10px 4px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;cursor:pointer;color:var(--txt2);transition:all .2s;
+  border:none;background:transparent;font-family:'Rajdhani',sans-serif;
+  border-bottom:2px solid transparent;font-size:10px;font-weight:700;letter-spacing:.5px;
+}
+.tab svg{width:20px;height:20px;transition:all .2s}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.tab.active svg{filter:drop-shadow(0 0 6px var(--acc))}
+.tab:active{transform:scale(.95)}
+
+/* ── Panel container ── */
+#panels{flex:1;overflow:hidden;position:relative}
+.panel{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  display:none;flex-direction:column;-webkit-overflow-scrolling:touch;
+}
+.panel.active{display:flex}
+.panel::-webkit-scrollbar{width:3px}
+.panel::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+/* ── Status bar ── */
+#statusbar{
+  height:26px;display:flex;align-items:center;gap:14px;padding:0 14px;
+  background:rgba(7,11,20,.95);border-top:1px solid var(--bd);flex-shrink:0;
+}
+.stat{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt2);display:flex;align-items:center;gap:4px}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)}
+
+/* ══════════════════════════════
+   PANEL: CHAT
+══════════════════════════════ */
+#chat-messages{
+  flex:1;padding:14px;display:flex;flex-direction:column;gap:12px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+#chat-messages::-webkit-scrollbar{width:3px}
+#chat-messages::-webkit-scrollbar-thumb{background:var(--bd)}
+
+.welcome-wrap{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;gap:16px;padding:20px;text-align:center;
+}
+.welcome-logo{
+  font-family:'Orbitron',monospace;font-size:42px;font-weight:900;
+  background:linear-gradient(135deg,var(--acc),var(--acc2),var(--acc3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{opacity:1}50%{opacity:.8}}
+.welcome-sub{font-size:13px;color:var(--txt2);line-height:1.6;max-width:300px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.chip{
+  padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;
+  border:1px solid var(--bd);color:var(--txt2);cursor:pointer;transition:all .2s;
+  background:var(--s2);-webkit-tap-highlight-color:transparent;
+}
+.chip:active{border-color:var(--acc);color:var(--acc);background:rgba(255,107,26,.1)}
+
+.msg{display:flex;gap:10px;animation:msgIn .3s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse}
+.av{
+  width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;
+}
+.av.ai{background:linear-gradient(135deg,var(--acc),var(--acc2));color:white;box-shadow:0 0 12px var(--glow)}
+.av.usr{background:linear-gradient(135deg,var(--cyan),var(--purple));color:white}
+.bubble{
+  max-width:78%;padding:10px 14px;border-radius:12px;font-size:13px;
+  line-height:1.65;font-weight:500;word-break:break-word;
+}
+.bubble.ai{background:var(--s2);border:1px solid var(--bd);color:var(--txt)}
+.bubble.usr{background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);color:var(--txt)}
+.bubble pre{
+  background:rgba(0,0,0,.5);border:1px solid var(--bd);border-radius:8px;
+  padding:10px;overflow-x:auto;margin:8px 0;
+  font-family:'Share Tech Mono',monospace;font-size:11px;white-space:pre-wrap;word-break:break-all;
+}
+.bubble code{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--acc2)}
+
+.typing-dots{display:flex;gap:4px;align-items:center;padding:4px 0}
+.typing-dots span{
+  width:5px;height:5px;background:var(--acc);border-radius:50%;
+  animation:td 1.2s infinite;
+}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+#chat-input-area{
+  padding:12px;background:rgba(13,20,36,.92);
+  border-top:1px solid var(--bd);backdrop-filter:blur(12px);flex-shrink:0;
+}
+#chat-row{display:flex;gap:8px;align-items:flex-end}
+#chat-box{
+  flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:10px;
+  padding:10px 12px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:14px;
+  resize:none;outline:none;line-height:1.5;min-height:42px;max-height:120px;
+  transition:border-color .2s;
+}
+#chat-box:focus{border-color:var(--acc)}
+#send-btn{
+  width:42px;height:42px;border-radius:10px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--acc),var(--acc2));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 16px var(--glow);flex-shrink:0;transition:all .2s;
+}
+#send-btn:active{transform:scale(.93)}
+#send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ══════════════════════════════
+   PANEL: TOOLS
+══════════════════════════════ */
+.tools-header{padding:18px 16px 10px}
+.sec-title{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--txt);margin-bottom:3px}
+.sec-sub{font-size:12px;color:var(--txt2)}
+.tools-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:0 12px 16px;
+}
+.tcrd{
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:16px 14px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;
+}
+.tcrd:active{border-color:var(--acc);transform:scale(.97)}
+.tcrd-icon{font-size:26px;margin-bottom:10px}
+.tcrd-name{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--txt);margin-bottom:5px;letter-spacing:.4px}
+.tcrd-desc{font-size:11px;color:var(--txt2);line-height:1.4}
+.tcrd-badge{
+  position:absolute;top:10px;right:10px;padding:2px 7px;border-radius:20px;
+  font-size:9px;font-weight:700;letter-spacing:.4px;
+}
+.badge-new{background:rgba(0,255,156,.1);color:var(--green);border:1px solid rgba(0,255,156,.3)}
+.badge-hot{background:rgba(255,107,26,.15);color:var(--acc);border:1px solid rgba(255,107,26,.3)}
+.badge-pro{background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+
+/* ══════════════════════════════
+   PANEL: BUILDER
+══════════════════════════════ */
+#builder-panel{padding:14px;gap:12px}
+.builder-quick{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.builder-quick::-webkit-scrollbar{display:none}
+.quick-chip{
+  white-space:nowrap;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;
+  border:1px solid var(--bd);color:var(--txt2);cursor:pointer;background:var(--s2);flex-shrink:0;
+}
+.quick-chip:active{border-color:var(--cyan);color:var(--cyan)}
+#builder-prompt{
+  width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:10px;
+  padding:10px 12px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:14px;
+  resize:none;outline:none;min-height:60px;max-height:100px;
+}
+#builder-prompt:focus{border-color:var(--cyan)}
+.builder-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  padding:9px 16px;border-radius:10px;border:none;cursor:pointer;
+  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;
+  transition:all .2s;letter-spacing:.4px;
+}
+.btn-acc{background:linear-gradient(135deg,var(--acc),var(--acc2));color:white;box-shadow:0 0 14px var(--glow)}
+.btn-acc:active{transform:scale(.96)}
+.btn-out{background:transparent;border:1px solid var(--bd);color:var(--txt2)}
+.btn-out:active{border-color:var(--cyan);color:var(--cyan)}
+.btn-cyan{background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+.editor-frame{border:1px solid var(--bd);border-radius:12px;overflow:hidden;flex:1;display:flex;flex-direction:column;min-height:240px}
+.editor-hdr{
+  display:flex;align-items:center;gap:6px;padding:9px 12px;
+  background:var(--s2);border-bottom:1px solid var(--bd);
+}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot-r{background:#FF5F57}.dot-y{background:#FEBC2E}.dot-g{background:#28C840}
+.el{margin-left:auto;font-size:10px;color:var(--txt2);font-family:'Share Tech Mono',monospace}
+#code-out{
+  flex:1;background:rgba(0,0,0,.4);color:var(--txt);
+  font-family:'Share Tech Mono',monospace;font-size:11px;
+  padding:12px;resize:none;outline:none;border:none;
+  line-height:1.7;min-height:200px;white-space:pre-wrap;word-break:break-all;
+}
+
+/* ══════════════════════════════
+   PANEL: DEVICE
+══════════════════════════════ */
+#device-panel{padding:14px;gap:10px}
+.dev-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.dev-card{
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:16px;text-align:center;
+}
+.dev-label{font-size:10px;color:var(--txt2);margin-bottom:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.dev-val{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--acc)}
+.dev-sub{font-size:10px;color:var(--txt2);margin-top:4px}
+.gauge-wrap{position:relative;width:72px;height:72px;margin:4px auto 6px}
+.g-svg{width:72px;height:72px;transform:rotate(-90deg)}
+.g-bg{fill:none;stroke:var(--bd);stroke-width:7}
+.g-fill{fill:none;stroke-width:7;stroke-linecap:round;transition:stroke-dasharray 1.2s ease}
+.gauge-pct{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:12px;font-weight:700;
+}
+.dev-row{display:flex;flex-direction:column;gap:8px}
+.dev-info-card{
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+}
+.dev-info-icon{font-size:20px;flex-shrink:0}
+.dev-info-label{font-size:10px;color:var(--txt2);font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.dev-info-val{font-family:'Orbitron',monospace;font-size:13px;color:var(--txt);margin-top:3px;font-weight:700}
+
+/* ══════════════════════════════
+   PANEL: SETTINGS
+══════════════════════════════ */
+#settings-panel{padding:14px;gap:10px}
+.settings-group{background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.settings-group-title{
+  padding:12px 16px;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;
+  color:var(--txt2);letter-spacing:.5px;border-bottom:1px solid var(--bd);
+}
+.setting-row{
+  display:flex;align-items:center;padding:14px 16px;gap:12px;
+  border-bottom:1px solid rgba(26,45,74,.5);cursor:pointer;transition:background .2s;
+}
+.setting-row:last-child{border-bottom:none}
+.setting-row:active{background:rgba(255,107,26,.05)}
+.setting-icon{font-size:20px;flex-shrink:0}
+.setting-info{flex:1}
+.setting-name{font-size:14px;font-weight:600;color:var(--txt)}
+.setting-desc{font-size:11px;color:var(--txt2);margin-top:2px}
+.setting-val{font-size:12px;color:var(--acc);font-family:'Share Tech Mono',monospace}
+.toggle{
+  width:40px;height:22px;border-radius:11px;background:var(--bd);
+  position:relative;cursor:pointer;transition:background .25s;flex-shrink:0;border:none;
+}
+.toggle.on{background:var(--acc)}
+.toggle::after{
+  content:'';position:absolute;width:16px;height:16px;background:white;border-radius:50%;
+  top:3px;left:3px;transition:transform .25s;box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.toggle.on::after{transform:translateX(18px)}
+.api-input{
+  width:100%;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:8px;
+  padding:9px 12px;color:var(--txt);font-family:'Share Tech Mono',monospace;font-size:12px;
+  outline:none;margin-top:8px;
+}
+.api-input:focus{border-color:var(--acc)}
+.save-btn-wrap{padding:14px 16px 0}
+
+/* ══════════════════════════════
+   Utility
+══════════════════════════════ */
+.section-sep{height:1px;background:var(--bd);margin:4px 0}
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--s2);border:1px solid var(--acc);color:var(--acc);
+  padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;
+  font-family:'Rajdhani',sans-serif;z-index:999;opacity:0;
+  transition:all .3s;pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div id="grid-bg"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div id="shell">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <polygon points="14,2 24,8 24,20 14,26 4,20 4,8" fill="rgba(255,107,26,.18)" stroke="#FF6B1A" stroke-width="1.5"/>
+      <text x="14" y="19" text-anchor="middle" fill="#FF6B1A" font-size="11" font-weight="900" font-family="Orbitron,monospace">N</text>
+    </svg>
+    <span id="logo-text">NEXUS</span>
+    <span id="live-badge">LIVE</span>
+    <select id="model-pill">
+      <option value="google/gemini-2.0-flash-001">Gemini 2.0</option>
+      <option value="deepseek/deepseek-chat">DeepSeek</option>
+      <option value="google/gemini-flash-1.5">Gemini 1.5</option>
+      <option value="mistralai/mistral-7b-instruct">Mistral 7B</option>
+    </select>
+  </div>
+
+  <!-- NAV TABS -->
+  <div id="navtabs">
+    <button class="tab active" data-tab="chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      CHAT
+    </button>
+    <button class="tab" data-tab="tools">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      TOOLS
+    </button>
+    <button class="tab" data-tab="builder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      BUILD
+    </button>
+    <button class="tab" data-tab="device">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>
+      DEVICE
+    </button>
+    <button class="tab" data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      CONFIG
+    </button>
+  </div>
+
+  <!-- PANELS -->
+  <div id="panels">
+
+    <!-- CHAT PANEL -->
+    <div id="chat-panel" class="panel active">
+      <div id="chat-messages">
+        <div class="welcome-wrap" id="welcome">
+          <div class="welcome-logo">NEXUS</div>
+          <div class="welcome-sub">Your AI-powered Android studio. Code, build, analyze — all from your phone.</div>
+          <div class="chips">
+            <div class="chip" onclick="quickChat('Build Android login screen XML')">Android XML UI</div>
+            <div class="chip" onclick="quickChat('Write a Node.js REST API with auth')">Node.js API</div>
+            <div class="chip" onclick="quickChat('Create a React dashboard component')">React UI</div>
+            <div class="chip" onclick="quickChat('Debug my JavaScript code')">Debug JS</div>
+            <div class="chip" onclick="quickChat('Explain how REST APIs work')">REST APIs</div>
+          </div>
+        </div>
+      </div>
+      <div id="chat-input-area">
+        <div id="chat-row">
+          <textarea id="chat-box" placeholder="Ask anything — code, Android, web…" rows="1"></textarea>
+          <button id="send-btn" onclick="sendChat()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLS PANEL -->
+    <div id="tools-panel" class="panel">
+      <div class="tools-header">
+        <div class="sec-title">🧰 Tool Hub</div>
+        <div class="sec-sub">All AI tools in one place — tap to launch</div>
+      </div>
+      <div class="tools-grid">
+        <div class="tcrd" onclick="launchTool('android')"><div class="tcrd-badge badge-hot">HOT</div><div class="tcrd-icon">🤖</div><div class="tcrd-name">Android Builder</div><div class="tcrd-desc">Generate layouts, activities &amp; adapters</div></div>
+        <div class="tcrd" onclick="launchTool('web')"><div class="tcrd-badge badge-new">NEW</div><div class="tcrd-icon">🌐</div><div class="tcrd-name">Web Dev</div><div class="tcrd-desc">HTML, CSS, JS and React components</div></div>
+        <div class="tcrd" onclick="launchTool('api')"><div class="tcrd-badge badge-pro">PRO</div><div class="tcrd-icon">🚀</div><div class="tcrd-name">API Builder</div><div class="tcrd-desc">REST APIs with Express, Flask &amp; more</div></div>
+        <div class="tcrd" onclick="launchTool('debug')"><div class="tcrd-icon">🐛</div><div class="tcrd-name">Debugger</div><div class="tcrd-desc">Fix broken code instantly with AI</div></div>
+        <div class="tcrd" onclick="launchTool('security')"><div class="tcrd-badge badge-hot">HOT</div><div class="tcrd-icon">🔐</div><div class="tcrd-name">Security</div><div class="tcrd-desc">Code audit &amp; vulnerability scanner</div></div>
+        <div class="tcrd" onclick="launchTool('database')"><div class="tcrd-icon">🗄️</div><div class="tcrd-name">Database</div><div class="tcrd-desc">SQL, MongoDB query &amp; schema builder</div></div>
+        <div class="tcrd" onclick="launchTool('test')"><div class="tcrd-badge badge-new">NEW</div><div class="tcrd-icon">🧪</div><div class="tcrd-name">Test Writer</div><div class="tcrd-desc">Auto-generate unit &amp; integration tests</div></div>
+        <div class="tcrd" onclick="launchTool('doc')"><div class="tcrd-icon">📝</div><div class="tcrd-name">Doc Writer</div><div class="tcrd-desc">README, changelogs &amp; API docs</div></div>
+        <div class="tcrd" onclick="launchTool('ui')"><div class="tcrd-badge badge-pro">PRO</div><div class="tcrd-icon">🎨</div><div class="tcrd-name">UI Generator</div><div class="tcrd-desc">Describe UI, get production code</div></div>
+        <div class="tcrd" onclick="launchTool('git')"><div class="tcrd-icon">🤝</div><div class="tcrd-name">Git Helper</div><div class="tcrd-desc">Commits, PRs &amp; branch strategies</div></div>
+      </div>
+    </div>
+
+    <!-- BUILDER PANEL -->
+    <div id="builder-panel" class="panel">
+      <div class="sec-title" style="padding:16px 14px 4px">🏗️ Code Builder</div>
+      <div class="sec-sub" style="padding:0 14px 10px">AI-powered generator for Android, web &amp; backend</div>
+      <div class="builder-quick">
+        <div class="quick-chip" onclick="builderQuick('Build Android RecyclerView with custom adapter in Java')">Android RecyclerView</div>
+        <div class="quick-chip" onclick="builderQuick('Create complete login screen XML layout for Android')">Login XML</div>
+        <div class="quick-chip" onclick="builderQuick('Write Node.js Express REST API with JWT authentication')">Node.js + JWT</div>
+        <div class="quick-chip" onclick="builderQuick('Create React dashboard with charts and dark theme')">React Dashboard</div>
+        <div class="quick-chip" onclick="builderQuick('Write Python Flask API with SQLite and CRUD endpoints')">Flask API</div>
+        <div class="quick-chip" onclick="builderQuick('Create Android BottomNavigationView with 4 fragments')">Bottom Nav</div>
+      </div>
+      <textarea id="builder-prompt" placeholder="Describe what to build: 'Android login screen in XML', 'React navbar component'…"></textarea>
+      <div class="builder-actions">
+        <button class="btn btn-acc" onclick="generateCode()">⚡ Generate</button>
+        <button class="btn btn-out" onclick="copyCode()">📋 Copy</button>
+        <button class="btn btn-cyan" onclick="clearBuilder()">🗑 Clear</button>
+      </div>
+      <div class="editor-frame">
+        <div class="editor-hdr">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <span class="el" id="editor-lang">JAVA / XML</span>
+        </div>
+        <textarea id="code-out" readonly>// ⚡ Generated code appears here
+// Select a template above or type a prompt</textarea>
+      </div>
+    </div>
+
+    <!-- DEVICE PANEL -->
+    <div id="device-panel" class="panel">
+      <div class="sec-title" style="padding:16px 14px 4px">📱 Device Monitor</div>
+      <div class="sec-sub" style="padding:0 14px 12px">Live system stats from your Android device</div>
+      <div class="dev-grid">
+        <div class="dev-card">
+          <div class="dev-label">Battery</div>
+          <div class="gauge-wrap">
+            <svg class="g-svg" viewBox="0 0 72 72"><circle class="g-bg" cx="36" cy="36" r="28"/><circle class="g-fill" id="g-battery" cx="36" cy="36" r="28" stroke="#00FF9C"/></svg>
+            <div class="gauge-pct" id="pct-battery" style="color:#00FF9C">--%</div>
+          </div>
+          <div class="dev-sub" id="sub-battery">Health: Good</div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-label">RAM Usage</div>
+          <div class="gauge-wrap">
+            <svg class="g-svg" viewBox="0 0 72 72"><circle class="g-bg" cx="36" cy="36" r="28"/><circle class="g-fill" id="g-ram" cx="36" cy="36" r="28" stroke="#FF6B1A"/></svg>
+            <div class="gauge-pct" id="pct-ram" style="color:#FF6B1A">--%</div>
+          </div>
+          <div class="dev-sub" id="sub-ram">Loading…</div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-label">CPU Load</div>
+          <div class="gauge-wrap">
+            <svg class="g-svg" viewBox="0 0 72 72"><circle class="g-bg" cx="36" cy="36" r="28"/><circle class="g-fill" id="g-cpu" cx="36" cy="36" r="28" stroke="#00D4FF"/></svg>
+            <div class="gauge-pct" id="pct-cpu" style="color:#00D4FF">--%</div>
+          </div>
+          <div class="dev-sub">8-core processor</div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-label">Temperature</div>
+          <div id="temp-val" class="dev-val" style="margin-top:16px;font-size:28px">--°C</div>
+          <div class="dev-sub" id="sub-temp">Measuring…</div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-label">Storage</div>
+          <div class="gauge-wrap">
+            <svg class="g-svg" viewBox="0 0 72 72"><circle class="g-bg" cx="36" cy="36" r="28"/><circle class="g-fill" id="g-storage" cx="36" cy="36" r="28" stroke="#9D4EDD"/></svg>
+            <div class="gauge-pct" id="pct-storage" style="color:#9D4EDD">--%</div>
+          </div>
+          <div class="dev-sub" id="sub-storage">Loading…</div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-label">Network</div>
+          <div class="dev-val" id="net-type" style="font-size:15px;margin-top:12px">WiFi</div>
+          <div class="dev-sub" id="net-speed">↑ Mbps ↓ Mbps</div>
+        </div>
+      </div>
+      <div class="dev-row" style="padding:0 0 14px">
+        <div class="dev-info-card"><div class="dev-info-icon">📱</div><div><div class="dev-info-label">Device</div><div class="dev-info-val" id="di-model">Android Device</div></div></div>
+        <div class="dev-info-card"><div class="dev-info-icon">🤖</div><div><div class="dev-info-label">OS Version</div><div class="dev-info-val" id="di-os">Android 14</div></div></div>
+        <div class="dev-info-card"><div class="dev-info-icon">📺</div><div><div class="dev-info-label">Screen</div><div class="dev-info-val" id="di-screen">1080 × 2400</div></div></div>
+        <div class="dev-info-card"><div class="dev-info-icon">🌐</div><div><div class="dev-info-label">Browser</div><div class="dev-info-val" id="di-ua" style="font-size:10px;word-break:break-all">WebView</div></div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PANEL -->
+    <div id="settings-panel" class="panel">
+      <div class="sec-title" style="padding:16px 14px 4px">⚙️ Configuration</div>
+      <div class="sec-sub" style="padding:0 14px 12px">Customize Nexus AI Studio</div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">🔑 API BACKEND</div>
+        <div class="setting-row">
+          <div class="setting-icon">🌐</div>
+          <div class="setting-info">
+            <div class="setting-name">Backend URL</div>
+            <div class="setting-desc">Your Node.js server address</div>
+            <input class="api-input" id="backend-url" type="url" placeholder="http://YOUR_IP:3000" value="http://localhost:3000"/>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-icon">🔐</div>
+          <div class="setting-info">
+            <div class="setting-name">Client Key</div>
+            <div class="setting-desc">Frontend authentication key</div>
+            <input class="api-input" id="client-key" type="text" placeholder="nexus-client-key" value="nexus-client-key"/>
+          </div>
+        </div>
+        <div class="save-btn-wrap">
+          <button class="btn btn-acc" style="width:100%;margin-bottom:14px" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">🤖 AI MODEL</div>
+        <div class="setting-row">
+          <div class="setting-icon">⚡</div>
+          <div class="setting-info"><div class="setting-name">Default Model</div><div class="setting-desc">Choose your primary AI model</div></div>
+          <div class="setting-val">Gemini 2.0</div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-icon">💬</div>
+          <div class="setting-info"><div class="setting-name">Max Tokens</div><div class="setting-desc">Response length limit</div></div>
+          <div class="setting-val">2000</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">🎨 APPEARANCE</div>
+        <div class="setting-row">
+          <div class="setting-icon">🌑</div>
+          <div class="setting-info"><div class="setting-name">Dark Mode</div><div class="setting-desc">Deep space theme</div></div>
+          <button class="toggle on" id="dark-toggle" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="setting-row">
+          <div class="setting-icon">✨</div>
+          <div class="setting-info"><div class="setting-name">Animations</div><div class="setting-desc">Orbs and grid effects</div></div>
+          <button class="toggle on" id="anim-toggle" onclick="toggleAnimations(this)"></button>
+        </div>
+        <div class="setting-row">
+          <div class="setting-icon">📳</div>
+          <div class="setting-info"><div class="setting-name">Haptic Feedback</div><div class="setting-desc">Vibrate on actions</div></div>
+          <button class="toggle on" id="haptic-toggle" onclick="this.classList.toggle('on')"></button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">ℹ️ ABOUT</div>
+        <div class="setting-row"><div class="setting-icon">🚀</div><div class="setting-info"><div class="setting-name">Nexus AI Studio</div><div class="setting-desc">Built with Sketchware + WebView</div></div><div class="setting-val">v1.0</div></div>
+        <div class="setting-row"><div class="setting-icon">🔒</div><div class="setting-info"><div class="setting-name">Security</div><div class="setting-desc">Rate-limited backend, no key exposure</div></div><div class="setting-val">✅ SAFE</div></div>
+      </div>
+    </div>
+
+  </div><!-- /panels -->
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <div class="stat"><div class="sdot"></div><span id="stat-model">GEMINI</span></div>
+    <div class="stat">⏱ <span id="stat-time">--:--:--</span></div>
+    <div class="stat">🔒 SECURED</div>
+    <div class="stat" style="margin-left:auto">NEXUS v1.0</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════
+   NEXUS AI STUDIO — Core JS
+════════════════════════════════════════════ */
+
+// ── State ──────────────────────────────────
+let chatHistory = [];
+let isTyping = false;
+let deviceTimer = null;
+
+// ── Config (loaded from settings) ──────────
+function getBackendURL(){ return localStorage.getItem('nexus_backend') || 'http://localhost:3000'; }
+function getClientKey(){ return localStorage.getItem('nexus_key') || 'nexus-client-key'; }
+function getModel(){ return document.getElementById('model-pill').value; }
+
+// ── Tab navigation ─────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(id + '-panel').classList.add('active');
+    if (id === 'device') startDeviceMonitor();
+    else stopDeviceMonitor();
+  });
+});
+
+// ── Toast ──────────────────────────────────
+function showToast(msg, dur = 2000){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Clock ──────────────────────────────────
+function updateClock(){
+  document.getElementById('stat-time').textContent = new Date().toLocaleTimeString();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Model display ──────────────────────────
+document.getElementById('model-pill').addEventListener('change', function(){
+  const label = this.options[this.selectedIndex].text.split(' ')[0].toUpperCase();
+  document.getElementById('stat-model').textContent = label;
+});
+
+// ══════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════
+function quickChat(text){
+  document.getElementById('chat-box').value = text;
+  sendChat();
+}
+
+async function sendChat(){
+  if(isTyping) return;
+  const box = document.getElementById('chat-box');
+  const text = box.value.trim();
+  if(!text) return;
+
+  // Hide welcome
+  const welcome = document.getElementById('welcome');
+  if(welcome) welcome.style.display = 'none';
+
+  box.value = '';
+  box.style.height = '42px';
+  appendMsg('user', text);
+  chatHistory.push({ role:'user', content: text });
+  showTyping();
+
+  try{
+    const res = await fetch(getBackendURL() + '/api/chat', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': getClientKey()
+      },
+      body: JSON.stringify({
+        model: getModel(),
+        messages: chatHistory
+      })
+    });
+
+    if(!res.ok){
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Server error ' + res.status);
+    }
+
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || '⚠️ Empty response.';
+    hideTyping();
+    appendMsg('ai', reply);
+    chatHistory.push({ role:'assistant', content: reply });
+  } catch(e){
+    hideTyping();
+    appendMsg('ai', '⚠️ ' + (e.message || 'Cannot reach backend. Check your server URL in Config tab.'));
+  }
+}
+
+function appendMsg(role, text){
+  const wrap = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'user' : '');
+
+  const av = document.createElement('div');
+  av.className = 'av ' + (role === 'user' ? 'usr' : 'ai');
+  av.textContent = role === 'user' ? 'U' : 'N';
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + (role === 'user' ? 'usr' : 'ai');
+  bub.innerHTML = formatText(text);
+
+  div.appendChild(av);
+  div.appendChild(bub);
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+let typingEl = null;
+function showTyping(){
+  isTyping = true;
+  document.getElementById('send-btn').disabled = true;
+  const wrap = document.getElementById('chat-messages');
+  typingEl = document.createElement('div');
+  typingEl.className = 'msg';
+  typingEl.id = 'typing-indicator';
+  typingEl.innerHTML = `<div class="av ai">N</div><div class="bubble ai"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  wrap.appendChild(typingEl);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function hideTyping(){
+  isTyping = false;
+  document.getElementById('send-btn').disabled = false;
+  if(typingEl){ typingEl.remove(); typingEl = null; }
+}
+
+function formatText(text){
+  // Code blocks
+  text = text.replace(/```([\s\S]*?)```/g, (_, code) => `<pre>${escHtml(code.trim())}</pre>`);
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`);
+  // Bold
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Newlines
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Textarea auto-resize
+document.getElementById('chat-box').addEventListener('input', function(){
+  this.style.height = '42px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+document.getElementById('chat-box').addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }
+});
+
+// ══════════════════════════════════════════
+// TOOLS
+// ══════════════════════════════════════════
+const TOOL_PROMPTS = {
+  android: 'You are an expert Android developer. I need help building: ',
+  web: 'You are a web development expert specializing in HTML, CSS and JavaScript. I need: ',
+  api: 'You are a backend developer expert. Build me a: ',
+  debug: 'You are a senior debugger. Analyze and fix this code: ',
+  security: 'You are a cybersecurity expert. Perform a security audit on: ',
+  database: 'You are a database architect. Help me with: ',
+  test: 'You are a testing expert. Write comprehensive tests for: ',
+  doc: 'You are a technical writer. Write documentation for: ',
+  ui: 'You are a UI/UX expert developer. Create a beautiful component for: ',
+  git: 'You are a Git expert. Help me with: ',
+};
+
+function launchTool(tool){
+  // Switch to chat and pre-fill
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="chat"]').classList.add('active');
+  document.getElementById('chat-panel').classList.add('active');
+  const box = document.getElementById('chat-box');
+  box.value = TOOL_PROMPTS[tool] || '';
+  box.focus();
+  showToast('Tool loaded — complete your prompt!');
+}
+
+// ══════════════════════════════════════════
+// BUILDER
+// ══════════════════════════════════════════
+function builderQuick(prompt){
+  document.getElementById('builder-prompt').value = prompt;
+  generateCode();
+}
+
+async function generateCode(){
+  const prompt = document.getElementById('builder-prompt').value.trim();
+  if(!prompt){ showToast('⚠️ Enter a prompt first'); return; }
+
+  document.getElementById('code-out').value = '// ⏳ Generating code...\n// Please wait…';
+  document.getElementById('editor-lang').textContent = detectLang(prompt);
+
+  try{
+    const res = await fetch(getBackendURL() + '/api/chat', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': getClientKey()
+      },
+      body: JSON.stringify({
+        model: getModel(),
+        systemPrompt: 'You are an expert developer. Return ONLY clean, production-ready code with brief inline comments. No markdown fences, no preamble, no explanation outside code comments. Detect the language from the request automatically.',
+        messages:[{ role:'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    let code = data.choices?.[0]?.message?.content || '// Error generating code.';
+    // Strip markdown fences if model adds them anyway
+    code = code.replace(/```[\w]*\n?/g,'').replace(/```/g,'').trim();
+    document.getElementById('code-out').value = code;
+    showToast('✅ Code generated!');
+  } catch(e){
+    document.getElementById('code-out').value = '// ⚠️ Backend unreachable.\n// Set your server URL in Config tab.';
+    showToast('⚠️ Backend error');
+  }
+}
+
+function detectLang(p){
+  const pl = p.toLowerCase();
+  if(pl.includes('android') || pl.includes('xml') || pl.includes('layout')) return 'XML / JAVA';
+  if(pl.includes('kotlin')) return 'KOTLIN';
+  if(pl.includes('python') || pl.includes('flask') || pl.includes('django')) return 'PYTHON';
+  if(pl.includes('react') || pl.includes('jsx')) return 'JSX / REACT';
+  if(pl.includes('node') || pl.includes('express') || pl.includes('javascript')) return 'JAVASCRIPT';
+  if(pl.includes('sql')) return 'SQL';
+  if(pl.includes('html')) return 'HTML / CSS';
+  return 'CODE';
+}
+
+function copyCode(){
+  const code = document.getElementById('code-out').value;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(() => showToast('📋 Copied to clipboard!'));
+  } else {
+    // Fallback for older WebView
+    const ta = document.createElement('textarea');
+    ta.value = code; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 Copied!');
+  }
+}
+
+function clearBuilder(){
+  document.getElementById('builder-prompt').value = '';
+  document.getElementById('code-out').value = '// Code cleared. Enter a new prompt above.';
+  document.getElementById('editor-lang').textContent = 'CODE';
+}
+
+// ══════════════════════════════════════════
+// DEVICE MONITOR
+// ══════════════════════════════════════════
+function setGauge(id, pct, label, color){
+  const r = 28, circ = 2 * Math.PI * r;
+  const fill = (pct / 100) * circ;
+  const el = document.getElementById('g-' + id);
+  if(el){
+    el.style.strokeDasharray = fill + ' ' + (circ - fill);
+    el.style.filter = `drop-shadow(0 0 5px ${color})`;
+  }
+  const pctEl = document.getElementById('pct-' + id);
+  if(pctEl) pctEl.textContent = pct + '%';
+  const subEl = document.getElementById('sub-' + id);
+  if(subEl) subEl.textContent = label;
+}
+
+function updateDevice(){
+  // Simulate realistic Android stats with slight randomness
+  const bat = Math.floor(Math.random()*15 + 70);
+  const ram = Math.floor(Math.random()*25 + 45);
+  const cpu = Math.floor(Math.random()*35 + 15);
+  const temp = (Math.random()*8 + 34).toFixed(1);
+  const stor = Math.floor(Math.random()*10 + 58);
+
+  setGauge('battery', bat, bat > 20 ? '✅ Good' : '⚠️ Low', '#00FF9C');
+  setGauge('ram', ram, `~${(ram*0.08).toFixed(1)}GB / 8GB`, '#FF6B1A');
+  setGauge('cpu', cpu, `${cpu < 50 ? 'Efficient' : 'Active'}`, '#00D4FF');
+  setGauge('storage', stor, `${Math.round(stor*1.28)}GB / 128GB`, '#9D4EDD');
+
+  const tempEl = document.getElementById('temp-val');
+  const tempSub = document.getElementById('sub-temp');
+  if(tempEl){
+    tempEl.textContent = temp + '°C';
+    tempEl.style.color = temp > 43 ? '#FF5F57' : '#00FF9C';
+    tempSub.textContent = temp > 43 ? '⚠️ Warm' : '✅ Normal';
+  }
+
+  // Network
+  const netTypes = ['WiFi 6','LTE','5G'];
+  const netSpeeds = ['↑ 42  ↓ 120 Mbps','↑ 18  ↓ 45 Mbps','↑ 85  ↓ 300 Mbps'];
+  const ni = Math.floor(Math.random()*3);
+  const netEl = document.getElementById('net-type');
+  const netSpEl = document.getElementById('net-speed');
+  if(netEl){ netEl.textContent = netTypes[ni]; netSpEl.textContent = netSpeeds[ni]; }
+
+  // Static device info
+  document.getElementById('di-model').textContent = getDeviceModel();
+  document.getElementById('di-os').textContent = getAndroidVersion();
+  document.getElementById('di-screen').textContent = window.screen.width + ' × ' + window.screen.height;
+  const ua = navigator.userAgent;
+  document.getElementById('di-ua').textContent = ua.includes('Android') ? 'Android WebView' : ua.substring(0,40) + '…';
+}
+
+function getDeviceModel(){
+  const ua = navigator.userAgent;
+  const m = ua.match(/;\s*([^;)]+)\sBuild/);
+  return m ? m[1] : 'Android Device';
+}
+
+function getAndroidVersion(){
+  const ua = navigator.userAgent;
+  const m = ua.match(/Android\s([\d.]+)/);
+  return m ? 'Android ' + m[1] : 'Android';
+}
+
+function startDeviceMonitor(){
+  updateDevice();
+  deviceTimer = setInterval(updateDevice, 3500);
+}
+function stopDeviceMonitor(){
+  if(deviceTimer){ clearInterval(deviceTimer); deviceTimer = null; }
+}
+
+// ══════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════
+function saveSettings(){
+  const url = document.getElementById('backend-url').value.trim();
+  const key = document.getElementById('client-key').value.trim();
+  if(url) localStorage.setItem('nexus_backend', url);
+  if(key) localStorage.setItem('nexus_key', key);
+  showToast('✅ Settings saved!');
+}
+
+function toggleAnimations(btn){
+  btn.classList.toggle('on');
+  const on = btn.classList.contains('on');
+  document.getElementById('grid-bg').style.display = on ? '' : 'none';
+  document.querySelectorAll('.orb').forEach(o => o.style.display = on ? '' : 'none');
+}
+
+// Load saved settings
+window.addEventListener('load', () => {
+  const url = localStorage.getItem('nexus_backend');
+  const key = localStorage.getItem('nexus_key');
+  if(url) document.getElementById('backend-url').value = url;
+  if(key) document.getElementById('client-key').value = key;
+});
+</script>
+</body>
+</html>
