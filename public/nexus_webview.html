@@ -540,7 +540,7 @@ body{
           <div class="setting-info">
             <div class="setting-name">Backend URL</div>
             <div class="setting-desc">Your Node.js server address</div>
-            <input class="api-input" id="backend-url" type="url" placeholder="http://YOUR_IP:3000" value="http://localhost:3000"/>
+            <input class="api-input" id="backend-url" type="url" placeholder="http://YOUR_IP:3000" value="https://nexus-backend-production-ee01.up.railway.app"/>
           </div>
         </div>
         <div class="setting-row">
@@ -621,7 +621,7 @@ let isTyping = false;
 let deviceTimer = null;
 
 // ── Config (loaded from settings) ──────────
-function getBackendURL(){ return localStorage.getItem('nexus_backend') || 'http://localhost:3000'; }
+function getBackendURL(){ return localStorage.getItem('nexus_backend') || 'https://nexus-backend-production-ee01.up.railway.app'; }
 function getClientKey(){ return localStorage.getItem('nexus_key') || 'nexus-client-key'; }
 function getModel(){ return document.getElementById('model-pill').value; }
 
