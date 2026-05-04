@@ -29,22 +29,14 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow: no origin (mobile WebView / Postman), localhost, or listed origins
-    if (
-      !origin ||
-      origin.startsWith("http://localhost") ||
-      origin.startsWith("http://127.0.0.1") ||
-      origin.startsWith("file://") ||
-      ALLOWED_ORIGINS.includes(origin)
-    ) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS: Origin not allowed — " + origin));
-    }
+    callback(null, true);
   },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "x-api-key"],
+  credentials: false,
 }));
+
+app.options('*', cors());
 
 // ── Rate limiting ───────────────────────────────────────────
 // Global limiter
@@ -87,7 +79,7 @@ function requireKey(req, res, next) {
 }
 
 // ── Serve the WebView HTML directly ────────────────────────
-// This lets you open http://YOUR_IP:3000 on Android to use the app
+// This lets you open http://YOUR_IP:8080 on Android to use the app
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   const indexPath = path.join(__dirname, "public", "index.html");
@@ -234,11 +226,13 @@ app.use((err, req, res, next) => {
 });
 
 // ── Start ───────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || "0.0.0.0"; // 0.0.0.0 = accessible on LAN
+// Change this line at the bottom:
+const PORT = process.env.PORT || 8080;
+const HOST = "0.0.0.0";
 
 app.listen(PORT, HOST, () => {
-  console.log(`
+  console.log(`Server running on port ${PORT}`);
+});
 ╔══════════════════════════════════════════╗
 ║       NEXUS AI STUDIO — Backend          ║
 ╠══════════════════════════════════════════╣
@@ -250,6 +244,14 @@ app.listen(PORT, HOST, () => {
 ║  GET  /api/health    — status check      ║
 ║  GET  /api/models    — list models       ║
 ║  POST /api/chat      — AI conversation   ║
+║  POST /api/generate  — code generation   ║
+╚══════════════════════════════════════════╝
+
+  Open on Android: http://YOUR_LAN_IP:${PORT}
+  Find your IP with: ipconfig / ifconfig
+  `);
+});
+OST /api/chat      — AI conversation   ║
 ║  POST /api/generate  — code generation   ║
 ╚══════════════════════════════════════════╝
 
