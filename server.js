@@ -1,126 +1,163 @@
-// ═══════════════════════════════════════════════════════════
-//  NEXUS AI STUDIO — Backend Server
-//  Node.js + Express | Secure | Rate-Limited | Multi-Model
-// ═══════════════════════════════════════════════════════════
-
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import path from "path";
-
-import { fileURLToPath } from "url";
 
 dotenv.config();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-// ── Security: body size limit ───────────────────────────────
-app.use(express.json({ limit: "12kb" }));
-app.use(express.urlencoded({ extended: false }));
+// ── Middleware ──────────────────────────────────────────────
+app.use(express.json({ limit: "10kb" }));
 
-// ── CORS: allow local + LAN requests (for Android WebView) ──
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
+// Open CORS for WebView + browser
+app.use(cors());
+app.options("*", cors());
 
-app.use(cors({
-  origin: function (origin, callback) {
-    callback(null, true);
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-api-key"],
-  credentials: false,
-}));
-
-app.options('*', cors());
-
-// ── Rate limiting ───────────────────────────────────────────
-// Global limiter
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min window
+// Rate limit
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
   max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests. Please wait a moment." },
+  message: { error: "Too many requests" },
 });
-
-// Stricter limiter for chat endpoint
-const chatLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,  // 1 min window
-  max: 15,
-  message: { error: "Chat rate limit hit. Max 15 messages per minute." },
-});
-
-app.use(globalLimiter);
-
-// ── Allowed models ──────────────────────────────────────────
-const ALLOWED_MODELS = new Set([
-  "google/gemini-2.0-flash-001",
-  "google/gemini-flash-1.5",
-  "deepseek/deepseek-chat",
-  "mistralai/mistral-7b-instruct",
-  "meta-llama/llama-3-8b-instruct",
-  "anthropic/claude-3-haiku",
-]);
-
-// ── Frontend auth key ───────────────────────────────────────
-const FRONTEND_KEY = process.env.FRONTEND_KEY || "nexus-client-key";
+app.use(limiter);
 
 // ── Auth middleware ─────────────────────────────────────────
-function requireKey(req, res, next) {
+const FRONTEND_KEY = process.env.FRONTEND_KEY || "nexus-client-key";
+
+function auth(req, res, next) {
   if (req.headers["x-api-key"] !== FRONTEND_KEY) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
 }
 
-// ── Serve the WebView HTML directly ────────────────────────
-// This lets you open http://YOUR_IP:8080 on Android to use the app
-app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) => {
-  const indexPath = path.join(__dirname, "public", "index.html");
-  res.sendFile(indexPath, (err) => {
-    if (err) res.json({ message: "Nexus AI Backend running ✅" });
-  });
-});
+// ── Allowed models ──────────────────────────────────────────
+const ALLOWED_MODELS = [
+  "google/gemini-2.0-flash-001",
+  "google/gemini-flash-1.5",
+  "deepseek/deepseek-chat",
+  "mistralai/mistral-7b-instruct",
+  "meta-llama/llama-3-8b-instruct",
+];
 
-// ── Health check ────────────────────────────────────────────
+// ── Routes ──────────────────────────────────────────────────
+
+// Health check — no auth needed
 app.get("/api/health", (req, res) => {
-  res.json({
-    status: "online",
-    version: "1.0.0",
-    models: [...ALLOWED_MODELS],
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ status: "online", version: "1.0.0" });
 });
 
-// ── Models list ──────────────────────────────────────────────
-app.get("/api/models", requireKey, (req, res) => {
-  res.json({ models: [...ALLOWED_MODELS] });
+// Models list
+app.get("/api/models", auth, (req, res) => {
+  res.json({ models: ALLOWED_MODELS });
 });
 
-// ── Main Chat endpoint ──────────────────────────────────────
-app.post("/api/chat", requireKey, chatLimiter, async (req, res) => {
+// Chat
+app.post("/api/chat", auth, async (req, res) => {
   try {
-    const { model, messages, systemPrompt, temperature, maxTokens } = req.body;
+    const { model, messages, systemPrompt } = req.body;
 
-    // Validate
-    if (!model || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: "Invalid request: model and messages are required." });
-    }
-    if (!ALLOWED_MODELS.has(model)) {
-      return res.status(403).json({ error: `Model '${model}' is not allowed.` });
+    if (!model || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "model and messages required" });
     }
 
-    // Sanitize messages
-    const cleanMessages = messages
-      .filter(m => m.role && m.content && typeof m.content === "string")
-      .map(m => ({ role: m.role, content: m.content.substring(0, 8000) }))
-      .slice(-20); // Max 20 turns context
+    if (!ALLOWED_MODELS.includes(model)) {
+      return res.status(403).json({ error: "Model not allowed" });
+    }
+
+    const fullMessages = systemPrompt
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages;
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://nexus-ai-studio.app",
+        "X-Title": "Nexus AI Studio",
+      },
+      body: JSON.stringify({
+        model,
+        messages: fullMessages,
+        max_tokens: 2000,
+        temperature: 0.7,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("[OpenRouter Error]", data);
+      return res.status(502).json({ error: data?.error?.message || "AI error" });
+    }
+
+    return res.json(data);
+
+  } catch (err) {
+    console.error("[Chat Error]", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Code generate
+app.post("/api/generate", auth, async (req, res) => {
+  try {
+    const { prompt, model } = req.body;
+    if (!prompt) return res.status(400).json({ error: "Prompt required" });
+
+    const useModel = ALLOWED_MODELS.includes(model)
+      ? model
+      : "google/gemini-2.0-flash-001";
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://nexus-ai-studio.app",
+        "X-Title": "Nexus AI Studio",
+      },
+      body: JSON.stringify({
+        model: useModel,
+        messages: [
+          {
+            role: "system",
+            content: "Return ONLY clean code with inline comments. No markdown fences.",
+          },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 3000,
+        temperature: 0.3,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) return res.status(502).json({ error: data?.error?.message });
+
+    let code = data.choices?.[0]?.message?.content || "";
+    code = code.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
+
+    return res.json({ code });
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 404 fallback
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+// ── Start ───────────────────────────────────────────────────
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Nexus AI Backend running on port ${PORT}`);
+});
+ 20 turns context
 
     // Build full messages array with optional system prompt
     const fullMessages = systemPrompt
