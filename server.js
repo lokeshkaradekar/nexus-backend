@@ -30,47 +30,8 @@ function auth(req, res, next) {
 
 const ALLOWED_MODELS = [
   "google/gemini-2.0-flash-001",
-  "google/gemini
-
-cd nexus-backend
-
-cat > server.js << 'ENDOFFILE'
-import express from "express";
-import fetch from "node-fetch";
-import dotenv from "dotenv";
-import cors from "cors";
-import rateLimit from "express-rate-limit";
-
-dotenv.config();
-
-const app = express();
-
-app.use(express.json({ limit: "10kb" }));
-app.use(cors());
-app.options("*", cors());
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  message: { error: "Too many requests" },
-});
-app.use(limiter);
-
-const FRONTEND_KEY = process.env.FRONTEND_KEY || "nexus-client-key";
-
-function auth(req, res, next) {
-  if (req.headers["x-api-key"] !== FRONTEND_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  next();
-}
-
-const ALLOWED_MODELS = [
-  "google/gemini-2.0-flash-001",
-  "google/gemini-flash-1.5",
   "deepseek/deepseek-chat",
-  "mistralai/mistral-7b-instruct",
-  "meta-llama/llama-3-8b-instruct",
+  "mistralai/mistral-7b-instruct"
 ];
 
 app.get("/api/health", (req, res) => {
@@ -96,7 +57,7 @@ app.post("/api/chat", auth, async (req, res) => {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        Authorization: "Bearer " + process.env.OPENROUTER_API_KEY,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://nexus-ai-studio.app",
         "X-Title": "Nexus AI Studio",
@@ -110,7 +71,7 @@ app.post("/api/chat", auth, async (req, res) => {
     });
     const data = await response.json();
     if (!response.ok) {
-      return res.status(502).json({ error: data?.error?.message || "AI error" });
+      return res.status(502).json({ error: data.error.message || "AI error" });
     }
     return res.json(data);
   } catch (err) {
@@ -126,7 +87,7 @@ app.post("/api/generate", auth, async (req, res) => {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        Authorization: "Bearer " + process.env.OPENROUTER_API_KEY,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://nexus-ai-studio.app",
         "X-Title": "Nexus AI Studio",
@@ -134,7 +95,7 @@ app.post("/api/generate", auth, async (req, res) => {
       body: JSON.stringify({
         model: useModel,
         messages: [
-          { role: "system", content: "Return ONLY clean code with inline comments. No markdown fences." },
+          { role: "system", content: "Return ONLY clean code. No markdown fences." },
           { role: "user", content: prompt },
         ],
         max_tokens: 3000,
@@ -142,8 +103,8 @@ app.post("/api/generate", auth, async (req, res) => {
       }),
     });
     const data = await response.json();
-    if (!response.ok) return res.status(502).json({ error: data?.error?.message });
-    let code = data.choices?.[0]?.message?.content || "";
+    if (!response.ok) return res.status(502).json({ error: data.error.message });
+    let code = data.choices[0].message.content || "";
     code = code.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
     return res.json({ code });
   } catch (err) {
@@ -157,5 +118,5 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Nexus AI Backend running on port ${PORT}`);
+  console.log("Nexus AI Backend running on port " + PORT);
 });
