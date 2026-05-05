@@ -20,7 +20,7 @@ Chat with AI, build apps, generate code, and monitor your device — all from on
 
 | Version | Date | Size | Link |
 |---------|------|------|------|
-| v1.0.0 | May 2026 | ~5MB | [📥 Download APK](../../releases/latest) |
+| v1.0.0 | May 2026 | ~7.5MB | [📥 Download APK](../../releases/latest) |
 
 > **Install tip:** Enable "Install from unknown sources" in Android Settings → Security before installing.
 
